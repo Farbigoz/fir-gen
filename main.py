@@ -11,6 +11,10 @@ from ui.FirPlotter import SignalPlotter
 from src.firGen import *
 
 
+OUTPUT_DIR = "out"
+TEMPLATES_DIR = "templates"
+
+
 class FirGeneratorApp(QMainWindow):
     taps = []
 
@@ -63,7 +67,7 @@ class FirGeneratorApp(QMainWindow):
 
         loCut = self.ui.lowerCutFreq.value()
         hiCut = self.ui.upperCutFreq.value()
-        tapNum = self.ui.taps.value()
+        tapCount = self.ui.taps.value()
         samplerate = self.ui.freq.value()
 
         # Фильтр низких частот
@@ -74,7 +78,7 @@ class FirGeneratorApp(QMainWindow):
 
             # Генерируем фильтр
             try:
-                self.taps = lpf_fir(tapNum, hiCut, samplerate)
+                self.taps = lpf_fir(tapCount, hiCut, samplerate)
             except Exception as e:
                 self.ui.statusbar.showMessage("Ошибка: " + str(e))
                 return
@@ -94,7 +98,7 @@ class FirGeneratorApp(QMainWindow):
 
             # Генерируем фильтр
             try:
-                self.taps = bpf_fir(tapNum, loCut, hiCut, samplerate)
+                self.taps = bpf_fir(tapCount, loCut, hiCut, samplerate)
             except Exception as e:
                 self.ui.statusbar.showMessage("Ошибка: " + str(e))
                 return
@@ -110,7 +114,7 @@ class FirGeneratorApp(QMainWindow):
 
             # Генерируем фильтр
             try:
-                self.taps = hpf_fir(tapNum, loCut, samplerate)
+                self.taps = hpf_fir(tapCount, loCut, samplerate)
             except Exception as e:
                 self.ui.statusbar.showMessage("Ошибка: " + str(e))
                 return
@@ -124,7 +128,7 @@ class FirGeneratorApp(QMainWindow):
     def saveFilter(self):
         loCut = self.ui.lowerCutFreq.value()
         hiCut = self.ui.upperCutFreq.value()
-        tapNum = self.ui.taps.value()
+        tapCount = self.ui.taps.value()
         samplerate = self.ui.freq.value()
 
         # Определение типа фильтра
@@ -162,17 +166,17 @@ class FirGeneratorApp(QMainWindow):
 
         # Генерация таблицы
         tapsTable = ""
-        for k in range(0, tapNum, 8):
+        for k in range(0, tapCount, 8):
             tapsTable += "\t"
 
             for i in range(0, 8):
-                if k + i >= tapNum:
+                if k + i >= tapCount:
                     break
 
                 if numType == "float":
                     tapsTable += f"{taps[k + i]:>24}"
                 if numType == "int16_t":
-                    tapsTable += f"{taps[k+i]:>6}"
+                    tapsTable += f"{taps[k + i]:>6}"
                 else:
                     tapsTable += f"{taps[k + i]:>12}"
 
@@ -182,41 +186,35 @@ class FirGeneratorApp(QMainWindow):
 
         tapsTable = tapsTable[:-3]  # Отрезаем последние 3 символа - запятая, пробел и перенос строки
 
-        # Шаблон файла фильтра для языка СИ
-        with open("src/template.h", "r", encoding="UTF-8") as templateCFile:
-            templateC = templateCFile.read()
+        for templateFileName in os.listdir(TEMPLATES_DIR):
+            # Расширение файла шаблона
+            templateExt = os.path.splitext(templateFileName)[1][1:]
 
-        # Заполнение шаблона и сохранение файла
-        with open(f"out/c/{fileName}.h", "w", encoding="UTF-8") as cFile:
-            cFile.write(
-                templateC.format(
-                    fileName=f"{fileName}.h",
-                    type=type,
-                    freq=freq,
-                    samplerate=samplerate,
-                    tapNum=tapNum,
-                    numType=numType,
-                    tapsTable=tapsTable
+            if (templateExt == ""):
+                continue
+
+            # Загружаем шаблон
+            with open(os.path.join(TEMPLATES_DIR, templateFileName), "r", encoding="UTF-8") as templateFile:
+                template = templateFile.read()
+
+            # Создаём папку результатов, если её нет
+            resultFolder = os.path.join(OUTPUT_DIR, templateExt)
+            os.makedirs(resultFolder, exist_ok=True)
+
+            # Заполнение шаблона и сохранение результата
+            outFileName = f"{fileName}.{templateExt}"
+            with open(os.path.join(resultFolder, outFileName), "w", encoding="UTF-8") as cFile:
+                cFile.write(
+                    template.format(
+                        fileName=outFileName,
+                        type=type,
+                        freq=freq,
+                        samplerate=samplerate,
+                        tapCount=tapCount,
+                        numType=numType,
+                        tapsTable=tapsTable
+                    )
                 )
-            )
-
-        # Шаблон файла фильтра для языка Python
-        with open("src/template.py", "r", encoding="UTF-8") as templatePyFile:
-            templatePy = templatePyFile.read()
-
-        # Заполнение шаблона и сохранение файла
-        with open(f"out/py/{fileName}.py", "w", encoding="UTF-8") as pyFile:
-            pyFile.write(
-                templatePy.format(
-                    fileName=f"{fileName}.py",
-                    type=type,
-                    freq=freq,
-                    samplerate=samplerate,
-                    tapNum=tapNum,
-                    numType=numType,
-                    tapsTable=tapsTable
-                )
-            )
 
         # Вывод сообщения об успешном сохранении файлов
         self.ui.statusbar.showMessage(f"Фильтр сохранён в \"{os.path.abspath('out')}\". Название файлов: {fileName}")
