@@ -174,8 +174,8 @@ class FirGeneratorApp(QMainWindow):
                     break
 
                 if numType == "float":
-                    tapsTable += f"{taps[k + i]:>24}"
-                if numType == "int16_t":
+                    tapsTable += f"{taps[k + i]:>26}"
+                elif numType == "int16_t":
                     tapsTable += f"{taps[k + i]:>6}"
                 else:
                     tapsTable += f"{taps[k + i]:>12}"
@@ -217,7 +217,7 @@ class FirGeneratorApp(QMainWindow):
                 )
 
         # Вывод сообщения об успешном сохранении файлов
-        self.ui.statusbar.showMessage(f"Фильтр сохранён в \"{os.path.abspath('out')}\". Название файлов: {fileName}")
+        self.ui.statusbar.showMessage(f"Фильтр сохранён в \"{os.path.abspath(OUTPUT_DIR)}\". Название файлов: {fileName}")
 
 
 if __name__ == "__main__":
